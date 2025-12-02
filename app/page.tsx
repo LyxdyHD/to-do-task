@@ -57,7 +57,9 @@ function SortableTodoItem({ todo, toggleTodo, deleteTodo }: {
       initial={{ opacity: 0, height: 0 }}
       animate={{ opacity: 1, height: 'auto' }}
       exit={{ opacity: 0, height: 0 }}
-      className={	ask-item flex items-center gap-3 p-3 rounded-xl hover:bg-slate-800/30 transition-colors group  }
+      className={`task-item flex items-center gap-3 p-3 rounded-xl hover:bg-slate-800/30 transition-colors group ${
+        todo.completed ? 'task-completed' : ''
+      } ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
     >
       {/* Drag Handle */}
       <div
@@ -251,7 +253,11 @@ export default function Home() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={lex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all }
+                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
+                  filter === f
+                    ? 'filter-active'
+                    : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800'
+                }`}
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
