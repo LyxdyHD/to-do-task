@@ -1,7 +1,24 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Todo {
   id: number;
@@ -12,10 +29,80 @@ interface Todo {
 
 type FilterType = 'all' | 'active' | 'completed';
 
+// Sortable Todo Item Component
+function SortableTodoItem({ todo, toggleTodo, deleteTodo }: {
+  todo: Todo;
+  toggleTodo: (id: number) => void;
+  deleteTodo: (id: number) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: todo.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <motion.div
+      ref={setNodeRef}
+      style={style}
+      initial={{ opacity: 0, height: 0 }}
+      animate={{ opacity: 1, height: 'auto' }}
+      exit={{ opacity: 0, height: 0 }}
+      className={	ask-item flex items-center gap-3 p-3 rounded-xl hover:bg-slate-800/30 transition-colors group  }
+    >
+      {/* Drag Handle */}
+      <div
+        {...attributes}
+        {...listeners}
+        className="drag-handle cursor-grab active:cursor-grabbing p-1 text-slate-400 hover:text-slate-300 transition-colors"
+      >
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
+        </svg>
+      </div>
+
+      <input
+        type="checkbox"
+        checked={todo.completed}
+        onChange={() => toggleTodo(todo.id)}
+        className="custom-checkbox"
+      />
+      <span className="flex-1 text-slate-100 task-text font-light">
+        {todo.text}
+      </span>
+      <button
+        onClick={() => deleteTodo(todo.id)}
+        className="delete-btn p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const [todos, setTodos] = useState<Todo[]>([]);
   const [input, setInput] = useState('');
   const [filter, setFilter] = useState<FilterType>('all');
+
+  // Drag and Drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   // Load from localStorage
   useEffect(() => {
@@ -55,14 +142,22 @@ export default function Home() {
     setTodos(todos.filter(todo => todo.id !== id));
   };
 
-  const editTodo = (id: number, newText: string) => {
-    setTodos(todos.map(todo =>
-      todo.id === id ? { ...todo, text: newText } : todo
-    ));
-  };
-
   const clearCompleted = () => {
     setTodos(todos.filter(todo => !todo.completed));
+  };
+
+  // Handle drag end
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setTodos((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
   };
 
   const filteredTodos = todos.filter(todo => {
@@ -87,7 +182,7 @@ export default function Home() {
             Tasks
           </h1>
           <p className="text-slate-400 text-sm">
-            Stay organized, stay productive
+            Stay organized, stay productive • Drag to reorder
           </p>
         </motion.div>
 
@@ -156,11 +251,7 @@ export default function Home() {
               <button
                 key={f}
                 onClick={() => setFilter(f)}
-                className={`flex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all ${
-                  filter === f
-                    ? 'filter-active'
-                    : 'text-slate-300 hover:text-slate-100 hover:bg-slate-800'
-                }`}
+                className={lex-1 py-2 px-4 rounded-lg text-sm font-medium transition-all }
               >
                 {f.charAt(0).toUpperCase() + f.slice(1)}
               </button>
@@ -168,7 +259,7 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Todo List */}
+        {/* Todo List with Drag & Drop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -189,39 +280,29 @@ export default function Home() {
               </p>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
-              <AnimatePresence>
-                {filteredTodos.map((todo) => (
-                  <motion.div
-                    key={todo.id}
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    className={`task-item flex items-center gap-3 p-3 rounded-xl hover:bg-slate-800/30 transition-colors group ${
-                      todo.completed ? 'task-completed' : ''
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={todo.completed}
-                      onChange={() => toggleTodo(todo.id)}
-                      className="custom-checkbox"
-                    />
-                    <span className="flex-1 text-slate-100 task-text font-light">
-                      {todo.text}
-                    </span>
-                    <button
-                      onClick={() => deleteTodo(todo.id)}
-                      className="delete-btn p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={filteredTodos.map(t => t.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+                  <AnimatePresence>
+                    {filteredTodos.map((todo) => (
+                      <SortableTodoItem
+                        key={todo.id}
+                        todo={todo}
+                        toggleTodo={toggleTodo}
+                        deleteTodo={deleteTodo}
+                      />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </SortableContext>
+            </DndContext>
           )}
         </motion.div>
 
@@ -233,7 +314,7 @@ export default function Home() {
           className="text-center mt-8"
         >
           <p className="text-xs text-slate-500 font-light">
-            Built with Next.js, TypeScript & Framer Motion
+            Built with Next.js, TypeScript & Framer Motion • Drag & Drop enabled
           </p>
         </motion.div>
       </div>
