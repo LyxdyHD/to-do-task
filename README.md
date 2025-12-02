@@ -48,10 +48,10 @@ A beautiful, ultra-clean task management application with dark theme and smooth 
 
 ```bash
 # Clone repository
-git clone https://github.com/LyxdyHD/modern-todo-app.git
+git clone https://github.com/LyxdyHD/to-do-task.git
 
 # Navigate to project
-cd modern-todo-app
+cd to-do-task
 
 # Install dependencies
 npm install
