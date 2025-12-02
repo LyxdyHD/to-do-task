@@ -121,7 +121,7 @@ Perfect for:
 ## 📂 Project Structure
 
 ```
-modern-todo-app/
+to-do-task/
 ├── app/
 │   ├── page.tsx          # Main todo component
 │   ├── layout.tsx        # Root layout
